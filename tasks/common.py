@@ -7,6 +7,7 @@ Example tasks: MMLU, ARC-Easy, ARC-Challenge, GSM8K, HumanEval, SmolTalk.
 
 import random
 
+
 class Task:
     """
     Base class of a Task. Allows for lightweight slicing of the underlying dataset.
@@ -18,7 +19,7 @@ class Task:
         assert stop is None or stop >= start, f"Stop should be greater than or equal to start, got {stop} and {start}"
         assert step >= 1, f"Step must be strictly positive, got {step}"
         self.start = start
-        self.stop = stop # could be None here
+        self.stop = stop  # could be None here
         self.step = step
 
     @property
@@ -37,8 +38,8 @@ class Task:
         stop = self.num_examples() if self.stop is None else self.stop
         step = self.step
         span = stop - start
-        num = (span + step - 1) // step # ceil_div(span, step)
-        assert num >= 0, f"Negative number of examples???: {num}" # prevent footguns
+        num = (span + step - 1) // step  # ceil_div(span, step)
+        assert num >= 0, f"Negative number of examples???: {num}"  # prevent footguns
         return num
 
     def __getitem__(self, index: int):

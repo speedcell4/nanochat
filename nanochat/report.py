@@ -2,15 +2,17 @@
 Utilities for generating training report cards. More messy code than usual, will fix.
 """
 
+import datetime
 import os
+import platform
 import re
 import shutil
-import subprocess
 import socket
-import datetime
-import platform
+import subprocess
+
 import psutil
 import torch
+
 
 def run_command(cmd):
     """Run a shell command and return output, or None if it fails."""
@@ -21,6 +23,7 @@ def run_command(cmd):
         return None
     except:
         return None
+
 
 def get_git_info():
     """Get current git commit, branch, and dirty status."""
@@ -38,6 +41,7 @@ def get_git_info():
 
     return info
 
+
 def get_gpu_info():
     """Get GPU information."""
     if not torch.cuda.is_available():
@@ -54,12 +58,13 @@ def get_gpu_info():
     for i in range(num_devices):
         props = torch.cuda.get_device_properties(i)
         info["names"].append(props.name)
-        info["memory_gb"].append(props.total_memory / (1024**3))
+        info["memory_gb"].append(props.total_memory / (1024 ** 3))
 
     # Get CUDA version
     info["cuda_version"] = torch.version.cuda or "unknown"
 
     return info
+
 
 def get_system_info():
     """Get system information."""
@@ -74,7 +79,7 @@ def get_system_info():
     # CPU and memory
     info['cpu_count'] = psutil.cpu_count(logical=False)
     info['cpu_count_logical'] = psutil.cpu_count(logical=True)
-    info['memory_gb'] = psutil.virtual_memory().total / (1024**3)
+    info['memory_gb'] = psutil.virtual_memory().total / (1024 ** 3)
 
     # User and environment
     info['user'] = os.environ.get('USER', 'unknown')
@@ -82,6 +87,7 @@ def get_system_info():
     info['working_dir'] = os.getcwd()
 
     return info
+
 
 def estimate_cost(gpu_info, runtime_hours=None):
     """Estimate training cost based on GPU type and runtime."""
@@ -113,6 +119,7 @@ def estimate_cost(gpu_info, runtime_hours=None):
         "gpu_type": gpu_name,
         "estimated_total": hourly_rate * runtime_hours if runtime_hours else None
     }
+
 
 def generate_header():
     """Generate the header for a training report."""
@@ -165,7 +172,7 @@ Generated: {timestamp}
     num_chars = len(packaged)
     num_lines = len(packaged.split('\n'))
     num_files = len([x for x in packaged.split('\n') if x.startswith('<source>')])
-    num_tokens = num_chars // 4 # assume approximately 4 chars per token
+    num_tokens = num_chars // 4  # assume approximately 4 chars per token
 
     # count dependencies via uv.lock
     uv_lock_lines = 0
@@ -184,11 +191,13 @@ Generated: {timestamp}
 """
     return header
 
+
 # -----------------------------------------------------------------------------
 
 def slugify(text):
     """Slugify a text string."""
     return text.lower().replace(" ", "-")
+
 
 # the expected files and their order
 EXPECTED_FILES = [
@@ -207,16 +216,18 @@ EXPECTED_FILES = [
 # the metrics we're currently interested in
 chat_metrics = ["ARC-Easy", "ARC-Challenge", "MMLU", "GSM8K", "HumanEval", "ChatCORE"]
 
+
 def extract(section, keys):
     """simple def to extract a single key from a section"""
     if not isinstance(keys, list):
-        keys = [keys] # convenience
+        keys = [keys]  # convenience
     out = {}
     for line in section.split("\n"):
         for key in keys:
             if key in line:
                 out[key] = line.split(":")[1].strip()
     return out
+
 
 def extract_timestamp(content, prefix):
     """Extract timestamp from content with given prefix."""
@@ -228,6 +239,7 @@ def extract_timestamp(content, prefix):
             except:
                 pass
     return None
+
 
 class Report:
     """Maintains a bunch of logs, generates a final markdown report."""
@@ -269,7 +281,7 @@ class Report:
         report_dir = self.report_dir
         report_file = os.path.join(report_dir, "report.md")
         print(f"Generating report to {report_file}")
-        final_metrics = {} # the most important final metrics we'll add as table at the end
+        final_metrics = {}  # the most important final metrics we'll add as table at the end
         start_time = None
         end_time = None
         with open(report_file, "w") as out_file:
@@ -303,7 +315,7 @@ class Report:
                 if file_name == "chat-evaluation-sft.md":
                     final_metrics["sft"] = extract(section, chat_metrics)
                 if file_name == "chat-evaluation-rl.md":
-                    final_metrics["rl"] = extract(section, "GSM8K") # RL only evals GSM8K
+                    final_metrics["rl"] = extract(section, "GSM8K")  # RL only evals GSM8K
                 # append this section of the report
                 out_file.write(section)
                 out_file.write("\n")
@@ -374,14 +386,17 @@ class Report:
             f.write(f"Run started: {start_time}\n\n---\n\n")
         print(f"Reset report and wrote header to {header_file}")
 
+
 # -----------------------------------------------------------------------------
 # nanochat-specific convenience functions
 
 class DummyReport:
     def log(self, *args, **kwargs):
         pass
+
     def reset(self, *args, **kwargs):
         pass
+
 
 def get_report():
     # just for convenience, only rank 0 logs to report
@@ -393,10 +408,13 @@ def get_report():
     else:
         return DummyReport()
 
+
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="Generate or reset nanochat training reports.")
-    parser.add_argument("command", nargs="?", default="generate", choices=["generate", "reset"], help="Operation to perform (default: generate)")
+    parser.add_argument("command", nargs="?", default="generate", choices=["generate", "reset"],
+                        help="Operation to perform (default: generate)")
     args = parser.parse_args()
     if args.command == "generate":
         get_report().generate()

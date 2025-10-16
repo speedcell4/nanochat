@@ -6,16 +6,17 @@ from nanochat.common import get_dist_info
 from nanochat.dataset import parquets_iter_batched
 from nanochat.tokenizer import get_tokenizer
 
+
 def tokenizing_distributed_data_loader(B, T, split, tokenizer_threads=4, tokenizer_batch_size=128):
     """Stream pretraining text from parquet files, tokenize, yield training batches."""
     assert split in ["train", "val"], "split must be 'train' or 'val'"
     ddp, ddp_rank, ddp_local_rank, ddp_world_size = get_dist_info()
-    needed_tokens = B * T + 1 # +1 is because we also need the target at the last token
+    needed_tokens = B * T + 1  # +1 is because we also need the target at the last token
     # get the tokenizer and the bos token
     tokenizer = get_tokenizer()
     bos_token = tokenizer.get_bos_token_id()
     # scratch buffer holds the tokens for one iteration
-    token_buffer = deque() # we stream tokens on the right and pop from the left
+    token_buffer = deque()  # we stream tokens on the right and pop from the left
     scratch = torch.empty(needed_tokens, dtype=torch.int64, pin_memory=True)
 
     # infinite iterator over document batches
@@ -25,7 +26,8 @@ def tokenizing_distributed_data_loader(B, T, split, tokenizer_threads=4, tokeniz
             for batch in parquets_iter_batched(split=split, start=ddp_rank, step=ddp_world_size):
                 # for the tokenizer we might want to go in usually smaller batches, e.g. 128 rows
                 for i in range(0, len(batch), tokenizer_batch_size):
-                    yield batch[i:i+tokenizer_batch_size]
+                    yield batch[i:i + tokenizer_batch_size]
+
     batches = document_batches()
 
     batch_index = 0

@@ -2,8 +2,10 @@
 A number of functions that help with evaluating a base model.
 """
 import math
+
 import torch
 import torch.distributed as dist
+
 
 @torch.no_grad()
 def evaluate_bpb(model, batches, steps, token_bytes):
@@ -30,9 +32,9 @@ def evaluate_bpb(model, batches, steps, token_bytes):
     batch_iter = iter(batches)
     for _ in range(steps):
         x, y = next(batch_iter)
-        loss2d = model(x, y, loss_reduction='none') # (B, T)
-        loss2d = loss2d.view(-1) # flatten
-        y = y.view(-1) # flatten
+        loss2d = model(x, y, loss_reduction='none')  # (B, T)
+        loss2d = loss2d.view(-1)  # flatten
+        y = y.view(-1)  # flatten
         if (y < 0).any():
             # slightly more complex code path if some target tokens are ignore_index (e.g. -1)
             # any target token < 0 is to be ignored: do NOT index token_bytes with negatives

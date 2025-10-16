@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>NanoChat</title>
-    <link rel="icon" type="image/svg+xml" href="/logo.svg">
+    <link href="/logo.svg" rel="icon" type="image/svg+xml">
     <style>
         :root {
             color-scheme: light;
@@ -219,8 +219,12 @@
         }
 
         @keyframes typing {
-            0%, 60%, 100% { opacity: 0.2; }
-            30% { opacity: 1; }
+            0%, 60%, 100% {
+                opacity: 0.2;
+            }
+            30% {
+                opacity: 1;
+            }
         }
 
         .error-message {
@@ -234,328 +238,330 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-left">
-            <button class="new-conversation-btn" onclick="newConversation()" title="New Conversation (Ctrl+Shift+N)">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 5v14"></path>
-                    <path d="M5 12h14"></path>
-                </svg>
-            </button>
-            <h1>nanochat</h1>
-        </div>
+<div class="header">
+    <div class="header-left">
+        <button class="new-conversation-btn" onclick="newConversation()" title="New Conversation (Ctrl+Shift+N)">
+            <svg fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                 viewBox="0 0 24 24" width="18">
+                <path d="M12 5v14"></path>
+                <path d="M5 12h14"></path>
+            </svg>
+        </button>
+        <h1>nanochat</h1>
     </div>
+</div>
 
-    <div class="chat-container" id="chatContainer">
-        <div class="chat-wrapper" id="chatWrapper">
-            <!-- Messages will be added here -->
-        </div>
+<div class="chat-container" id="chatContainer">
+    <div class="chat-wrapper" id="chatWrapper">
+        <!-- Messages will be added here -->
     </div>
+</div>
 
-    <div class="input-container">
-        <div class="input-wrapper">
+<div class="input-container">
+    <div class="input-wrapper">
             <textarea
-                id="chatInput"
-                class="chat-input"
-                placeholder="Ask anything"
-                rows="1"
-                onkeydown="handleKeyDown(event)"
+                    class="chat-input"
+                    id="chatInput"
+                    onkeydown="handleKeyDown(event)"
+                    placeholder="Ask anything"
+                    rows="1"
             ></textarea>
-            <button id="sendButton" class="send-button" onclick="sendMessage()" disabled>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 2L11 13"></path>
-                    <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
-                </svg>
-            </button>
-        </div>
+        <button class="send-button" disabled id="sendButton" onclick="sendMessage()">
+            <svg fill="none" height="22" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                 viewBox="0 0 24 24" width="22">
+                <path d="M22 2L11 13"></path>
+                <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+            </svg>
+        </button>
     </div>
+</div>
 
-    <script>
-        const API_URL = '';
-        const chatContainer = document.getElementById('chatContainer');
-        const chatWrapper = document.getElementById('chatWrapper');
-        const chatInput = document.getElementById('chatInput');
-        const sendButton = document.getElementById('sendButton');
+<script>
+    const API_URL = '';
+    const chatContainer = document.getElementById('chatContainer');
+    const chatWrapper = document.getElementById('chatWrapper');
+    const chatInput = document.getElementById('chatInput');
+    const sendButton = document.getElementById('sendButton');
 
-        let messages = [];
-        let isGenerating = false;
-        let currentTemperature = 0.8;
-        let currentTopK = 50;
+    let messages = [];
+    let isGenerating = false;
+    let currentTemperature = 0.8;
+    let currentTopK = 50;
 
-        chatInput.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
-            sendButton.disabled = !this.value.trim() || isGenerating;
-        });
+    chatInput.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+        sendButton.disabled = !this.value.trim() || isGenerating;
+    });
 
-        function handleKeyDown(event) {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                sendMessage();
+    function handleKeyDown(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+        }
+    }
+
+    document.addEventListener('keydown', function (event) {
+        // Ctrl+Shift+N for new conversation
+        if (event.ctrlKey && event.shiftKey && event.key === 'N') {
+            event.preventDefault();
+            if (!isGenerating) {
+                newConversation();
             }
         }
+    });
 
-        document.addEventListener('keydown', function(event) {
-            // Ctrl+Shift+N for new conversation
-            if (event.ctrlKey && event.shiftKey && event.key === 'N') {
-                event.preventDefault();
+    function newConversation() {
+        messages = [];
+        chatWrapper.innerHTML = '';
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+        sendButton.disabled = false;
+        isGenerating = false;
+        chatInput.focus();
+    }
+
+    function addMessage(role, content, messageIndex = null) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${role}`;
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+        contentDiv.textContent = content;
+
+        // Add click handler for user messages to enable editing
+        if (role === 'user' && messageIndex !== null) {
+            contentDiv.setAttribute('data-message-index', messageIndex);
+            contentDiv.setAttribute('title', 'Click to edit and restart from here');
+            contentDiv.addEventListener('click', function () {
                 if (!isGenerating) {
-                    newConversation();
+                    editMessage(messageIndex);
                 }
-            }
-        });
-
-        function newConversation() {
-            messages = [];
-            chatWrapper.innerHTML = '';
-            chatInput.value = '';
-            chatInput.style.height = 'auto';
-            sendButton.disabled = false;
-            isGenerating = false;
-            chatInput.focus();
+            });
         }
 
-        function addMessage(role, content, messageIndex = null) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${role}`;
-
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content';
-            contentDiv.textContent = content;
-
-            // Add click handler for user messages to enable editing
-            if (role === 'user' && messageIndex !== null) {
-                contentDiv.setAttribute('data-message-index', messageIndex);
-                contentDiv.setAttribute('title', 'Click to edit and restart from here');
-                contentDiv.addEventListener('click', function() {
-                    if (!isGenerating) {
-                        editMessage(messageIndex);
-                    }
-                });
-            }
-
-            // Add click handler for assistant messages to enable regeneration
-            if (role === 'assistant' && messageIndex !== null) {
-                contentDiv.setAttribute('data-message-index', messageIndex);
-                contentDiv.setAttribute('title', 'Click to regenerate this response');
-                contentDiv.addEventListener('click', function() {
-                    if (!isGenerating) {
-                        regenerateMessage(messageIndex);
-                    }
-                });
-            }
-
-            messageDiv.appendChild(contentDiv);
-            chatWrapper.appendChild(messageDiv);
-
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            return contentDiv;
-        }
-
-        function editMessage(messageIndex) {
-            // Find the message in the messages array
-            if (messageIndex < 0 || messageIndex >= messages.length) return;
-
-            const messageToEdit = messages[messageIndex];
-            if (messageToEdit.role !== 'user') return;
-
-            // Copy message content to input
-            chatInput.value = messageToEdit.content;
-            chatInput.style.height = 'auto';
-            chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px';
-
-            // Remove this message and all subsequent messages from the array
-            messages = messages.slice(0, messageIndex);
-
-            // Remove message elements from DOM starting from messageIndex
-            const allMessages = chatWrapper.querySelectorAll('.message');
-            for (let i = messageIndex; i < allMessages.length; i++) {
-                allMessages[i].remove();
-            }
-
-            // Enable send button and focus input
-            sendButton.disabled = false;
-            chatInput.focus();
-        }
-
-        async function generateAssistantResponse() {
-            isGenerating = true;
-            sendButton.disabled = true;
-
-            const assistantContent = addMessage('assistant', '');
-            assistantContent.innerHTML = '<span class="typing-indicator"></span>';
-
-            try {
-                const response = await fetch(`${API_URL}/chat/completions`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        messages: messages,
-                        temperature: currentTemperature,
-                        top_k: currentTopK,
-                        max_tokens: 512
-                    }),
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+        // Add click handler for assistant messages to enable regeneration
+        if (role === 'assistant' && messageIndex !== null) {
+            contentDiv.setAttribute('data-message-index', messageIndex);
+            contentDiv.setAttribute('title', 'Click to regenerate this response');
+            contentDiv.addEventListener('click', function () {
+                if (!isGenerating) {
+                    regenerateMessage(messageIndex);
                 }
+            });
+        }
 
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let fullResponse = '';
-                assistantContent.textContent = '';
+        messageDiv.appendChild(contentDiv);
+        chatWrapper.appendChild(messageDiv);
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        return contentDiv;
+    }
 
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
+    function editMessage(messageIndex) {
+        // Find the message in the messages array
+        if (messageIndex < 0 || messageIndex >= messages.length) return;
 
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const data = JSON.parse(line.slice(6));
-                                if (data.token) {
-                                    fullResponse += data.token;
-                                    assistantContent.textContent = fullResponse;
-                                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                                }
-                            } catch (e) {
+        const messageToEdit = messages[messageIndex];
+        if (messageToEdit.role !== 'user') return;
+
+        // Copy message content to input
+        chatInput.value = messageToEdit.content;
+        chatInput.style.height = 'auto';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px';
+
+        // Remove this message and all subsequent messages from the array
+        messages = messages.slice(0, messageIndex);
+
+        // Remove message elements from DOM starting from messageIndex
+        const allMessages = chatWrapper.querySelectorAll('.message');
+        for (let i = messageIndex; i < allMessages.length; i++) {
+            allMessages[i].remove();
+        }
+
+        // Enable send button and focus input
+        sendButton.disabled = false;
+        chatInput.focus();
+    }
+
+    async function generateAssistantResponse() {
+        isGenerating = true;
+        sendButton.disabled = true;
+
+        const assistantContent = addMessage('assistant', '');
+        assistantContent.innerHTML = '<span class="typing-indicator"></span>';
+
+        try {
+            const response = await fetch(`${API_URL}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    messages: messages,
+                    temperature: currentTemperature,
+                    top_k: currentTopK,
+                    max_tokens: 512
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullResponse = '';
+            assistantContent.textContent = '';
+
+            while (true) {
+                const {done, value} = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.token) {
+                                fullResponse += data.token;
+                                assistantContent.textContent = fullResponse;
+                                chatContainer.scrollTop = chatContainer.scrollHeight;
                             }
+                        } catch (e) {
                         }
                     }
                 }
-
-                const assistantMessageIndex = messages.length;
-                messages.push({ role: 'assistant', content: fullResponse });
-
-                // Add click handler to regenerate this assistant message
-                assistantContent.setAttribute('data-message-index', assistantMessageIndex);
-                assistantContent.setAttribute('title', 'Click to regenerate this response');
-                assistantContent.addEventListener('click', function() {
-                    if (!isGenerating) {
-                        regenerateMessage(assistantMessageIndex);
-                    }
-                });
-
-            } catch (error) {
-                console.error('Error:', error);
-                assistantContent.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
-            } finally {
-                isGenerating = false;
-                sendButton.disabled = !chatInput.value.trim();
-            }
-        }
-
-        async function regenerateMessage(messageIndex) {
-            // Find the message in the messages array
-            if (messageIndex < 0 || messageIndex >= messages.length) return;
-
-            const messageToRegenerate = messages[messageIndex];
-            if (messageToRegenerate.role !== 'assistant') return;
-
-            // Remove this message and all subsequent messages from the array
-            messages = messages.slice(0, messageIndex);
-
-            // Remove message elements from DOM starting from messageIndex
-            const allMessages = chatWrapper.querySelectorAll('.message');
-            for (let i = messageIndex; i < allMessages.length; i++) {
-                allMessages[i].remove();
             }
 
-            // Regenerate the assistant response
-            await generateAssistantResponse();
-        }
+            const assistantMessageIndex = messages.length;
+            messages.push({role: 'assistant', content: fullResponse});
 
-        function handleSlashCommand(command) {
-            const parts = command.trim().split(/\s+/);
-            const cmd = parts[0].toLowerCase();
-            const arg = parts[1];
-
-            if (cmd === '/temperature') {
-                if (arg === undefined) {
-                    addMessage('console', `Current temperature: ${currentTemperature}`);
-                } else {
-                    const temp = parseFloat(arg);
-                    if (isNaN(temp) || temp < 0 || temp > 2) {
-                        addMessage('console', 'Invalid temperature. Must be between 0.0 and 2.0');
-                    } else {
-                        currentTemperature = temp;
-                        addMessage('console', `Temperature set to ${currentTemperature}`);
-                    }
+            // Add click handler to regenerate this assistant message
+            assistantContent.setAttribute('data-message-index', assistantMessageIndex);
+            assistantContent.setAttribute('title', 'Click to regenerate this response');
+            assistantContent.addEventListener('click', function () {
+                if (!isGenerating) {
+                    regenerateMessage(assistantMessageIndex);
                 }
-                return true;
-            } else if (cmd === '/topk') {
-                if (arg === undefined) {
-                    addMessage('console', `Current top-k: ${currentTopK}`);
-                } else {
-                    const topk = parseInt(arg);
-                    if (isNaN(topk) || topk < 1 || topk > 200) {
-                        addMessage('console', 'Invalid top-k. Must be between 1 and 200');
-                    } else {
-                        currentTopK = topk;
-                        addMessage('console', `Top-k set to ${currentTopK}`);
-                    }
-                }
-                return true;
-            } else if (cmd === '/clear') {
-                newConversation();
-                return true;
-            } else if (cmd === '/help') {
-                addMessage('console',
-                    'Available commands:\n' +
-                    '/temperature - Show current temperature\n' +
-                    '/temperature <value> - Set temperature (0.0-2.0)\n' +
-                    '/topk - Show current top-k\n' +
-                    '/topk <value> - Set top-k (1-200)\n' +
-                    '/clear - Clear conversation\n' +
-                    '/help - Show this help message'
-                );
-                return true;
-            }
-            return false;
+            });
+
+        } catch (error) {
+            console.error('Error:', error);
+            assistantContent.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+        } finally {
+            isGenerating = false;
+            sendButton.disabled = !chatInput.value.trim();
+        }
+    }
+
+    async function regenerateMessage(messageIndex) {
+        // Find the message in the messages array
+        if (messageIndex < 0 || messageIndex >= messages.length) return;
+
+        const messageToRegenerate = messages[messageIndex];
+        if (messageToRegenerate.role !== 'assistant') return;
+
+        // Remove this message and all subsequent messages from the array
+        messages = messages.slice(0, messageIndex);
+
+        // Remove message elements from DOM starting from messageIndex
+        const allMessages = chatWrapper.querySelectorAll('.message');
+        for (let i = messageIndex; i < allMessages.length; i++) {
+            allMessages[i].remove();
         }
 
-        async function sendMessage() {
-            const message = chatInput.value.trim();
-            if (!message || isGenerating) return;
+        // Regenerate the assistant response
+        await generateAssistantResponse();
+    }
 
-            // Handle slash commands
-            if (message.startsWith('/')) {
-                chatInput.value = '';
-                chatInput.style.height = 'auto';
-                handleSlashCommand(message);
-                return;
+    function handleSlashCommand(command) {
+        const parts = command.trim().split(/\s+/);
+        const cmd = parts[0].toLowerCase();
+        const arg = parts[1];
+
+        if (cmd === '/temperature') {
+            if (arg === undefined) {
+                addMessage('console', `Current temperature: ${currentTemperature}`);
+            } else {
+                const temp = parseFloat(arg);
+                if (isNaN(temp) || temp < 0 || temp > 2) {
+                    addMessage('console', 'Invalid temperature. Must be between 0.0 and 2.0');
+                } else {
+                    currentTemperature = temp;
+                    addMessage('console', `Temperature set to ${currentTemperature}`);
+                }
             }
+            return true;
+        } else if (cmd === '/topk') {
+            if (arg === undefined) {
+                addMessage('console', `Current top-k: ${currentTopK}`);
+            } else {
+                const topk = parseInt(arg);
+                if (isNaN(topk) || topk < 1 || topk > 200) {
+                    addMessage('console', 'Invalid top-k. Must be between 1 and 200');
+                } else {
+                    currentTopK = topk;
+                    addMessage('console', `Top-k set to ${currentTopK}`);
+                }
+            }
+            return true;
+        } else if (cmd === '/clear') {
+            newConversation();
+            return true;
+        } else if (cmd === '/help') {
+            addMessage('console',
+                'Available commands:\n' +
+                '/temperature - Show current temperature\n' +
+                '/temperature <value> - Set temperature (0.0-2.0)\n' +
+                '/topk - Show current top-k\n' +
+                '/topk <value> - Set top-k (1-200)\n' +
+                '/clear - Clear conversation\n' +
+                '/help - Show this help message'
+            );
+            return true;
+        }
+        return false;
+    }
 
+    async function sendMessage() {
+        const message = chatInput.value.trim();
+        if (!message || isGenerating) return;
+
+        // Handle slash commands
+        if (message.startsWith('/')) {
             chatInput.value = '';
             chatInput.style.height = 'auto';
-
-            const userMessageIndex = messages.length;
-            messages.push({ role: 'user', content: message });
-            addMessage('user', message, userMessageIndex);
-
-            await generateAssistantResponse();
+            handleSlashCommand(message);
+            return;
         }
 
-        sendButton.disabled = false;
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
 
-        // Autofocus the chat input on page load
-        chatInput.focus();
+        const userMessageIndex = messages.length;
+        messages.push({role: 'user', content: message});
+        addMessage('user', message, userMessageIndex);
 
-        fetch(`${API_URL}/health`)
-            .then(response => response.json())
-            .then(data => {
-                console.log('Engine status:', data);
-            })
-            .catch(error => {
-                console.error('Engine not available:', error);
-                chatWrapper.innerHTML = '<div class="error-message">Engine not running. Please start engine.py first.</div>';
-            });
-    </script>
+        await generateAssistantResponse();
+    }
+
+    sendButton.disabled = false;
+
+    // Autofocus the chat input on page load
+    chatInput.focus();
+
+    fetch(`${API_URL}/health`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Engine status:', data);
+        })
+        .catch(error => {
+            console.error('Engine not available:', error);
+            chatWrapper.innerHTML = '<div class="error-message">Engine not running. Please start engine.py first.</div>';
+        });
+</script>
 </body>
 </html>

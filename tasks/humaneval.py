@@ -5,9 +5,12 @@ It is a coding benchmark.
 """
 
 import re
+
 from datasets import load_dataset
+
 from nanochat.execution import execute_code
 from tasks.common import Task
+
 
 def extract_imports(prompt):
     """Extract import statements from the beginning of a code block."""
@@ -20,6 +23,7 @@ def extract_imports(prompt):
             # Stop at first non-import, non-comment line
             break
     return '\n'.join(imports)
+
 
 def extract_program(completion):
     """
@@ -44,6 +48,7 @@ def extract_program(completion):
     # No code blocks found, return the whole completion
     return completion.strip()
 
+
 class HumanEval(Task):
 
     def __init__(self, **kwargs):
@@ -60,10 +65,10 @@ class HumanEval(Task):
     def get_example(self, index):
         """ Get a single problem from the dataset. """
         row = self.ds[index]
-        prompt = row['prompt'] # prompts in HumanEval are the beginning of the program
-        solution = row['canonical_solution'] # the correct continuation of the program
-        entry_point = row['entry_point'] # the function to check
-        test = row['test'] # the test cases
+        prompt = row['prompt']  # prompts in HumanEval are the beginning of the program
+        solution = row['canonical_solution']  # the correct continuation of the program
+        entry_point = row['entry_point']  # the function to check
+        test = row['test']  # the test cases
         complete_solution = f"{prompt}\n{solution}"
         messages = [
             {"role": "user", "content": prompt},
@@ -71,8 +76,8 @@ class HumanEval(Task):
         ]
         conversation = {
             "messages": messages,
-            "entry_point": entry_point, # needed during evaluation
-            "test": test, # needed during evaluation
+            "entry_point": entry_point,  # needed during evaluation
+            "test": test,  # needed during evaluation
         }
         return conversation
 
@@ -84,13 +89,13 @@ class HumanEval(Task):
         # but not always with the needed imports, so we manually append them
         completion_code = extract_program(completion)
         program = (
-            imports
-            + "\n\n"
-            + completion_code
-            + "\n\n"
-            + conversation['test']
-            + "\n"
-            + f"check({conversation['entry_point']})"
+                imports
+                + "\n\n"
+                + completion_code
+                + "\n\n"
+                + conversation['test']
+                + "\n"
+                + f"check({conversation['entry_point']})"
         )
         result = execute_code(program)
         success = result.success

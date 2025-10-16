@@ -31,22 +31,23 @@ Abuse Prevention:
 """
 
 import argparse
-import json
-import os
-import torch
 import asyncio
+import json
 import logging
+import os
 import random
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from typing import AsyncGenerator, List, Optional
+
+import torch
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel
-from typing import List, Optional, AsyncGenerator
-from dataclasses import dataclass
 
-from nanochat.common import compute_init
 from nanochat.checkpoint_manager import load_model
+from nanochat.common import compute_init
 from nanochat.engine import Engine
 
 # Abuse prevention limits
@@ -82,6 +83,7 @@ logger = logging.getLogger(__name__)
 
 ddp, ddp_rank, ddp_local_rank, ddp_world_size, device = compute_init()
 
+
 @dataclass
 class Worker:
     """A worker with a model loaded on a specific GPU."""
@@ -90,6 +92,7 @@ class Worker:
     engine: Engine
     tokenizer: object
     autocast_ctx: torch.amp.autocast
+
 
 class WorkerPool:
     """Pool of workers, each with a model replica on a different GPU."""
@@ -131,15 +134,18 @@ class WorkerPool:
         """Return a worker to the pool."""
         await self.available_workers.put(worker)
 
+
 class ChatMessage(BaseModel):
     role: str
     content: str
+
 
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
     top_k: Optional[int] = None
+
 
 def validate_chat_request(request: ChatRequest):
     """Validate chat request to prevent abuse."""
@@ -204,6 +210,7 @@ def validate_chat_request(request: ChatRequest):
                 detail=f"max_tokens must be between {MIN_MAX_TOKENS} and {MAX_MAX_TOKENS}"
             )
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load models on all GPUs on startup."""
@@ -212,6 +219,7 @@ async def lifespan(app: FastAPI):
     await app.state.worker_pool.initialize(args.source, model_tag=args.model_tag, step=args.step)
     print(f"Server ready at http://localhost:{args.port}")
     yield
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -222,6 +230,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.get("/")
 async def root():
@@ -243,12 +252,13 @@ async def logo():
     logo_path = os.path.join("nanochat", "logo.svg")
     return FileResponse(logo_path, media_type="image/svg+xml")
 
+
 async def generate_stream(
-    worker: Worker,
-    tokens,
-    temperature=None,
-    max_new_tokens=None,
-    top_k=None
+        worker: Worker,
+        tokens,
+        temperature=None,
+        max_new_tokens=None,
+        top_k=None
 ) -> AsyncGenerator[str, None]:
     """Generate assistant response with streaming."""
     temperature = temperature if temperature is not None else args.temperature
@@ -265,12 +275,12 @@ async def generate_stream(
 
     with worker.autocast_ctx:
         for token_column, token_masks in worker.engine.generate(
-            tokens,
-            num_samples=1,
-            max_tokens=max_new_tokens,
-            temperature=temperature,
-            top_k=top_k,
-            seed=random.randint(0, 2**31 - 1)
+                tokens,
+                num_samples=1,
+                max_tokens=max_new_tokens,
+                temperature=temperature,
+                top_k=top_k,
+                seed=random.randint(0, 2 ** 31 - 1)
         ):
             token = token_column[0]
 
@@ -294,6 +304,7 @@ async def generate_stream(
 
     yield f"data: {json.dumps({'done': True})}\n\n"
 
+
 @app.post("/chat/completions")
 async def chat_completions(request: ChatRequest):
     """Chat completion endpoint (streaming only) - uses worker pool for multi-GPU."""
@@ -302,10 +313,10 @@ async def chat_completions(request: ChatRequest):
     validate_chat_request(request)
 
     # Log incoming conversation to console
-    logger.info("="*20)
+    logger.info("=" * 20)
     for i, message in enumerate(request.messages):
         logger.info(f"[{message.role.upper()}]: {message.content}")
-    logger.info("-"*20)
+    logger.info("-" * 20)
 
     # Acquire a worker from the pool (will wait if all are busy)
     worker_pool = app.state.worker_pool
@@ -334,14 +345,15 @@ async def chat_completions(request: ChatRequest):
 
         # Streaming response with worker release after completion
         response_tokens = []
+
         async def stream_and_release():
             try:
                 async for chunk in generate_stream(
-                    worker,
-                    conversation_tokens,
-                    temperature=request.temperature,
-                    max_new_tokens=request.max_tokens,
-                    top_k=request.top_k
+                        worker,
+                        conversation_tokens,
+                        temperature=request.temperature,
+                        max_new_tokens=request.max_tokens,
+                        top_k=request.top_k
                 ):
                     # Accumulate response for logging
                     chunk_data = json.loads(chunk.replace("data: ", "").strip())
@@ -352,7 +364,7 @@ async def chat_completions(request: ChatRequest):
                 # Log the assistant response to console
                 full_response = "".join(response_tokens)
                 logger.info(f"[ASSISTANT] (GPU {worker.gpu_id}): {full_response}")
-                logger.info("="*20)
+                logger.info("=" * 20)
                 # Release worker back to pool after streaming is done
                 await worker_pool.release_worker(worker)
 
@@ -365,6 +377,7 @@ async def chat_completions(request: ChatRequest):
         await worker_pool.release_worker(worker)
         raise e
 
+
 @app.get("/health")
 async def health():
     """Health check endpoint."""
@@ -375,6 +388,7 @@ async def health():
         "num_gpus": worker_pool.num_gpus if worker_pool else 0,
         "available_workers": worker_pool.available_workers.qsize() if worker_pool else 0
     }
+
 
 @app.get("/stats")
 async def stats():
@@ -392,8 +406,10 @@ async def stats():
         ]
     }
 
+
 if __name__ == "__main__":
     import uvicorn
+
     print(f"Starting NanoChat Web Server")
     print(f"Temperature: {args.temperature}, Top-k: {args.top_k}, Max tokens: {args.max_tokens}")
     uvicorn.run(app, host=args.host, port=args.port)

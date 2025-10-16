@@ -7,12 +7,13 @@ This file contains utilities for:
 For details of how the dataset was prepared, see `repackage_data_reference.py`.
 """
 
-import os
 import argparse
+import os
 import time
-import requests
-import pyarrow.parquet as pq
 from multiprocessing import Pool
+
+import pyarrow.parquet as pq
+import requests
 
 from nanochat.common import get_base_dir
 
@@ -21,11 +22,12 @@ from nanochat.common import get_base_dir
 
 # The URL on the internet where the data is hosted and downloaded from on demand
 BASE_URL = "https://huggingface.co/datasets/karpathy/fineweb-edu-100b-shuffle/resolve/main"
-MAX_SHARD = 1822 # the last datashard is shard_01822.parquet
-index_to_filename = lambda index: f"shard_{index:05d}.parquet" # format of the filenames
+MAX_SHARD = 1822  # the last datashard is shard_01822.parquet
+index_to_filename = lambda index: f"shard_{index:05d}.parquet"  # format of the filenames
 base_dir = get_base_dir()
 DATA_DIR = os.path.join(base_dir, "base_data")
 os.makedirs(DATA_DIR, exist_ok=True)
+
 
 # -----------------------------------------------------------------------------
 # These functions are useful utilities to other modules, can/should be imported
@@ -39,6 +41,7 @@ def list_parquet_files(data_dir=None):
     ])
     parquet_paths = [os.path.join(data_dir, f) for f in parquet_files]
     return parquet_paths
+
 
 def parquets_iter_batched(split, start=0, step=1):
     """
@@ -55,6 +58,7 @@ def parquets_iter_batched(split, start=0, step=1):
             rg = pf.read_row_group(rg_idx)
             texts = rg.column('text').to_pylist()
             yield texts
+
 
 # -----------------------------------------------------------------------------
 def download_single_file(index):
@@ -111,8 +115,10 @@ def download_single_file(index):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download FineWeb-Edu 100BT dataset shards")
-    parser.add_argument("-n", "--num-files", type=int, default=-1, help="Number of shards to download (default: -1), -1 = disable")
-    parser.add_argument("-w", "--num-workers", type=int, default=4, help="Number of parallel download workers (default: 4)")
+    parser.add_argument("-n", "--num-files", type=int, default=-1,
+                        help="Number of shards to download (default: -1), -1 = disable")
+    parser.add_argument("-w", "--num-workers", type=int, default=4,
+                        help="Number of parallel download workers (default: 4)")
     args = parser.parse_args()
 
     num = MAX_SHARD + 1 if args.num_files == -1 else min(args.num_files, MAX_SHARD + 1)

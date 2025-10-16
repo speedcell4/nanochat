@@ -5,10 +5,12 @@ Intended to be run single GPU only atm:
 python -m scripts.chat_cli -i mid
 """
 import argparse
+
 import torch
+
+from nanochat.checkpoint_manager import load_model
 from nanochat.common import compute_init
 from nanochat.engine import Engine
-from nanochat.checkpoint_manager import load_model
 
 parser = argparse.ArgumentParser(description='Chat with the model')
 parser.add_argument('-i', '--source', type=str, default="sft", help="Source of the model: sft|mid|rl")
@@ -27,7 +29,8 @@ model, tokenizer, meta = load_model(args.source, device, phase="eval", model_tag
 # Special tokens for the chat state machine
 bos = tokenizer.get_bos_token_id()
 user_start, user_end = tokenizer.encode_special("<|user_start|>"), tokenizer.encode_special("<|user_end|>")
-assistant_start, assistant_end = tokenizer.encode_special("<|assistant_start|>"), tokenizer.encode_special("<|assistant_end|>")
+assistant_start, assistant_end = tokenizer.encode_special("<|assistant_start|>"), tokenizer.encode_special(
+    "<|assistant_end|>")
 
 # Create Engine for efficient generation
 engine = Engine(model, tokenizer)
@@ -83,7 +86,7 @@ while True:
     print("\nAssistant: ", end="", flush=True)
     with autocast_ctx:
         for token_column, token_masks in engine.generate(conversation_tokens, **generate_kwargs):
-            token = token_column[0] # pop the batch dimension (num_samples=1)
+            token = token_column[0]  # pop the batch dimension (num_samples=1)
             response_tokens.append(token)
             token_text = tokenizer.decode([token])
             print(token_text, end="", flush=True)

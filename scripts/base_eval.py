@@ -9,20 +9,21 @@ torchrun --nproc_per_node=8 base_eval.py
 
 The script will print the CORE metric to the console.
 """
+import json
 import os
+import random
 import sys
 import time
-import json
-import random
-import yaml
 
 import pandas as pd
 import torch
+import yaml
 
-from nanochat.common import compute_init, compute_cleanup, print0, get_base_dir
-from nanochat.tokenizer import HuggingFaceTokenizer
 from nanochat.checkpoint_manager import load_model
+from nanochat.common import compute_cleanup, compute_init, get_base_dir, print0
 from nanochat.core_eval import evaluate_task
+from nanochat.tokenizer import HuggingFaceTokenizer
+
 
 # -----------------------------------------------------------------------------
 # nanoChat specific function dealing with I/O etc.
@@ -89,11 +90,13 @@ def evaluate_model(model, tokenizer, device, max_per_task=-1):
     }
     return out
 
+
 # -----------------------------------------------------------------------------
 # HuggingFace loading utilities and light wrappers for a model
 
 class ModelWrapper:
     """Lightweight wrapper for a HuggingFace model"""
+
     def __init__(self, model, max_seq_len=None):
         self.model = model
         self.max_seq_len = max_seq_len
@@ -102,6 +105,7 @@ class ModelWrapper:
         outputs = self.model(input_ids)
         logits = outputs.logits
         return logits
+
 
 def load_hf_model(hf_path: str, device):
     print0(f"Loading model from: {hf_path}")
@@ -115,6 +119,7 @@ def load_hf_model(hf_path: str, device):
     # Load the tokenizer
     tokenizer = HuggingFaceTokenizer.from_pretrained(hf_path)
     return model, tokenizer
+
 
 # -----------------------------------------------------------------------------
 def main():
@@ -130,13 +135,13 @@ def main():
         hf_path = sys.argv[1]
         print0(f"Loading huggingface model from: {hf_path}")
         model, tokenizer = load_hf_model(hf_path, device)
-        model_name = hf_path # just for logging
-        model_slug = hf_path.replace("/", "-") # for the output csv file
+        model_name = hf_path  # just for logging
+        model_slug = hf_path.replace("/", "-")  # for the output csv file
     else:
         # load a local model from the file system
         model, tokenizer, meta = load_model("base", device, phase="eval")
-        model_name = f"base_model (step {meta['step']})" # just for logging
-        model_slug = f"base_model_{meta['step']:06d}" # for the output csv file
+        model_name = f"base_model (step {meta['step']})"  # just for logging
+        model_slug = f"base_model_{meta['step']:06d}"  # for the output csv file
 
     # Evaluate the model
     with autocast_ctx:
@@ -158,9 +163,9 @@ def main():
                 f.write(f"{label:<35}, {results[label]:<10.6f}, {centered_results[label]:<10.6f}\n")
             f.write(f"{'CORE':<35}, {'':<10}, {core_metric:<10.6f}\n")
         # Print the content of the csv file to console too
-        print0("="*80)
+        print0("=" * 80)
         print0(f"Model: {model_name}")
-        print0("="*80)
+        print0("=" * 80)
         with open(output_csv_path, 'r') as f:
             print0(f.read())
 
@@ -171,10 +176,11 @@ def main():
             "Model": model_name,
             "CORE metric": core_metric,
         },
-        centered_results, # the full table
+        centered_results,  # the full table
     ])
 
     compute_cleanup()
+
 
 if __name__ == "__main__":
     main()

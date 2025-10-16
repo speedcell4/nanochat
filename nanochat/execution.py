@@ -32,6 +32,7 @@ import tempfile
 from dataclasses import dataclass
 from typing import Optional
 
+
 # -----------------------------------------------------------------------------
 
 @dataclass
@@ -285,9 +286,9 @@ def _unsafe_execute(code: str, timeout: float, maximum_memory_bytes: Optional[in
 
 
 def execute_code(
-    code: str,
-    timeout: float = 5.0, # 5 seconds default
-    maximum_memory_bytes: Optional[int] = 256 * 1024 * 1024, # 256MB default
+        code: str,
+        timeout: float = 5.0,  # 5 seconds default
+        maximum_memory_bytes: Optional[int] = 256 * 1024 * 1024,  # 256MB default
 ) -> ExecutionResult:
     """
     Execute Python code in a sandboxed environment.
@@ -347,4 +348,3 @@ def execute_code(
         timeout=result_dict["timeout"],
         memory_exceeded=result_dict["memory_exceeded"],
     )
-

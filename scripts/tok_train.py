@@ -2,25 +2,29 @@
 Train a tokenizer using the HuggingFace Tokenizers library.
 In the style of GPT-4 tokenizer.
 """
+import argparse
 import os
 import time
-import argparse
+
 import torch
-from nanochat.tokenizer import RustBPETokenizer
+
 from nanochat.common import get_base_dir
 from nanochat.dataset import parquets_iter_batched
+from nanochat.tokenizer import RustBPETokenizer
 
 # -----------------------------------------------------------------------------
 # Parse command line arguments
 
 parser = argparse.ArgumentParser(description='Train a BPE tokenizer')
-parser.add_argument('--max_chars', type=int, default=10_000_000_000, help='Maximum characters to train on (default: 10B)')
+parser.add_argument('--max_chars', type=int, default=10_000_000_000,
+                    help='Maximum characters to train on (default: 10B)')
 parser.add_argument('--doc_cap', type=int, default=10_000, help='Maximum characters per document (default: 10,000)')
 parser.add_argument('--vocab_size', type=int, default=65536, help='Vocabulary size (default: 65536 = 2^16)')
 args = parser.parse_args()
 print(f"max_chars: {args.max_chars:,}")
 print(f"doc_cap: {args.doc_cap:,}")
 print(f"vocab_size: {args.vocab_size:,}")
+
 
 # -----------------------------------------------------------------------------
 # Text iterator
@@ -41,6 +45,8 @@ def text_iterator():
             yield doc_text
             if nchars > args.max_chars:
                 return
+
+
 text_iter = text_iterator()
 
 # -----------------------------------------------------------------------------
@@ -78,11 +84,11 @@ special_set = set(tokenizer.get_special_tokens())
 token_strings = [tokenizer.decode([token_id]) for token_id in range(vocab_size)]
 token_bytes = []
 for token_id in range(vocab_size):
-    token_str = token_strings[token_id] # the Python string representation of this token
+    token_str = token_strings[token_id]  # the Python string representation of this token
     if token_str in special_set:
-        token_bytes.append(0) # special characters are not counted
+        token_bytes.append(0)  # special characters are not counted
     else:
-        id_bytes = len(token_str.encode("utf-8")) # number of bytes that make up this token
+        id_bytes = len(token_str.encode("utf-8"))  # number of bytes that make up this token
         token_bytes.append(id_bytes)
 token_bytes = torch.tensor(token_bytes, dtype=torch.int32, device='cpu')
 token_bytes_path = os.path.join(tokenizer_dir, "token_bytes.pt")
@@ -92,9 +98,10 @@ print(f"Saved token_bytes to {token_bytes_path}")
 
 # Log to report
 from nanochat.report import get_report
+
 token_bytes_nonzero = (token_bytes[token_bytes > 0]).to(dtype=torch.float32)
 get_report().log(section="Tokenizer training", data=[
-    vars(args), # argparse command line arguments
+    vars(args),  # argparse command line arguments
     {"train_time": train_time},
     {"num_special_tokens": len(special_set)},
     {
